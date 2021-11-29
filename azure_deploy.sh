@@ -248,10 +248,6 @@ if [ $DEPLOY_REPLICA = "Y" ]; then
     blob_replica_deploy &
 fi
 
-if [ $DEPLOY_REPLICA = "Y" ]; then
-    blob_replica_deploy &
-fi
-
 if [ $DEPLOY_DB = "Y" ]; then
     db_deploy &
 fi
