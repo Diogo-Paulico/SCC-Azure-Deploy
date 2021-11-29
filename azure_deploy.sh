@@ -173,6 +173,23 @@ blob_deploy(){
     az functionapp config appsettings set --name $APP_NAME --resource-group $RESOURCE_GROUP --settings "$STORAGE_ACCOUNT_CONNECTION_STRING_VAR_NAME=$(az storage account show-connection-string -g $RESOURCE_GROUP -n $STORAGE_ACCOUNT_NAME | python3 -c "import sys, json; print(json.load(sys.stdin)['connectionString'])")"
 }
 
+blob_replica_deploy(){
+
+    az storage account create -n $STORAGE_ACCOUNT_REPLICA_NAME -g $RESOURCE_GROUP -l northeurope --sku Standard_LRS
+
+    #Set container soft-delete to false
+    az storage account blob-service-properties update --enable-container-delete-retention false --account-name $STORAGE_ACCOUNT_REPLICA_NAME --resource-group $RESOURCE_GROUP
+
+    #Set blob soft-delete to false
+    az storage account blob-service-properties update --account-name $STORAGE_ACCOUNT_REPLICA_NAME --resource-group $RESOURCE_GROUP --enable-delete-retention false
+
+    #Set shared file retention to disabled
+    az storage account file-service-properties update --account-name $STORAGE_ACCOUNT_REPLICA_NAME --resource-group $RESOURCE_GROUP --enable-delete-retention false
+
+    #Create "images" container
+    az storage container create -n $CONTAINER_NAME --account-name $STORAGE_ACCOUNT_REPLICA_NAME --public-access blob
+
+}
 
 db_deploy(){
     az functionapp config appsettings set --name $APP_NAME --resource-group $RESOURCE_GROUP --settings "$DB_NAME_VAR_NAME=$DATABASE_NAME"
@@ -203,6 +220,13 @@ az_fun_deploy(){
 
     #az functionapp config appsettings set --name "$AZ_FUN_APP_NAME" --resource-group "$RESOURCE_GROUP" --settings "mongoConnectionString=$(az cosmosdb keys list --name "$COSMOS_DB_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --type connection-strings | python3 -c "import sys, json; print(json.load(sys.stdin)['connectionStrings'][0]['connectionString'])")"
     #az functionapp config appsettings set --name "$AZ_FUN_APP_NAME" --resource-group "$RESOURCE_GROUP" --settings "$DB_NAME_VAR_NAME=$DATABASE_NAME"
+  
+    #Add connection string of main storage to Azure function
+    az functionapp config appsettings set --name $AZ_FUN_APP_NAME --resource-group $RESOURCE_GROUP --settings "BlobStoreConnection=$(az storage account show-connection-string -g $RESOURCE_GROUP -n $STORAGE_ACCOUNT_NAME | python3 -c "import sys, json; print(json.load(sys.stdin)['connectionString'])")"
+    
+    #Add connection string of replica to Azure function
+    az functionapp config appsettings set --name $AZ_FUN_APP_NAME --resource-group $RESOURCE_GROUP --settings "$STORAGE_ACCOUNT_REPLICA_CONNECTION_STRING_VAR_NAME=$(az storage account show-connection-string -g $RESOURCE_GROUP -n $STORAGE_ACCOUNT_REPLICA_NAME | python3 -c "import sys, json; print(json.load(sys.stdin)['connectionString'])")"
+
     cd ..
 }
 
@@ -220,6 +244,10 @@ if [ $DEPLOY_BLOB = "Y" ]; then
     blob_deploy &
 fi
 
+if [ $DEPLOY_REPLICA = "Y" ]; then
+    blob_replica_deploy &
+fi
+
 if [ $DEPLOY_DB = "Y" ]; then
     db_deploy &
 fi
@@ -229,4 +257,3 @@ wait
 if [ "$DEPLOY_AZ_FUN" = "Y" ]; then
     az_fun_deploy
 fi
-
