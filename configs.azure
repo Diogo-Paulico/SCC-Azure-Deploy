@@ -31,3 +31,8 @@ REDIS_KEY_VAR_NAME="REDIS_KEY"
 DEPLOY_AZ_FUN="Y" # Y or N
 AZ_FUN_APP_NAME="" #found in pom.xml of AZ_fun
 AZ_FUN_DIR="" #Assuming a dir inside the main folder with the azure functions code, where its pom is located
+
+#BLOB STORAGE REPLICA
+DEPLOY_REPLICA="Y" # Y or N
+STORAGE_ACCOUNT_REPLICA_NAME=""
+STORAGE_ACCOUNT_REPLICA_CONNECTION_STRING_VAR_NAME=""
